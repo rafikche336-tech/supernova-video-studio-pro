@@ -6,7 +6,7 @@ const WORKING_VIDEOS: any = {
   mochi: 'https://www.w3schools.com/html/movie.mp4',
   svd: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4',
   shorts: 'https://test-videos.co.uk/vids/jellyfish/mp4/h264/720/Jellyfish_720_10s_1MB.mp4',
-  ai: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
+  ai: 'https://www.w3schools.com/html/mov_bbb.mp4',
   edge: 'https://www.w3schools.com/html/mov_bbb.mp4',
   ultra: 'https://www.w3schools.com/html/movie.mp4',
   ent: 'https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_1MB.mp4',
