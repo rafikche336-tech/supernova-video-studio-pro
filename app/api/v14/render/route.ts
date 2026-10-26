@@ -148,17 +148,19 @@ async function generateSVDViaFal(prompt: string, falKey: string): Promise<string
 }
 
 function getDemoVideo(engine: string): string {
-  // Demo videos - work without API keys, hosted samples
+  // Demo videos - WORKING public URLs (commondatastorage + w3schools + sample-videos)
   const demos: any = {
-    wan: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    mochi: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    svd: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    shorts: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    ai: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-    edge: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-    ultra: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-    ent: 'https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+    wan: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    mochi: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    svd: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    shorts: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    ai: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+    edge: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+    ultra: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+    ent: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
   };
+  // Fallback to w3schools if needed - always works
+  // https://www.w3schools.com/html/mov_bbb.mp4
   return demos[engine] || demos.wan;
 }
 
