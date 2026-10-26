@@ -14,13 +14,7 @@ const WORKING_VIDEOS: VideoMap = {
   ai: 'https://www.w3schools.com/html/mov_bbb.mp4',
   edge: 'https://www.w3schools.com/html/mov_bbb.mp4',
   ultra: 'https://www.w3schools.com/html/movie.mp4',
-  ent: 'https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_1MB.mp4',
-};
 
-const TRANSLATIONS: Record<Lang, Tr> = {
-  EN: {
-    title: 'SUPERNOVA',
-    title2: 'VIDEO STUDIO PRO',
     ph: 'A cinematic shot of...',
     gen: 'GENERATE VIDEO',
     dl: 'DOWNLOAD',
