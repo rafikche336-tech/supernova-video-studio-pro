@@ -182,7 +182,7 @@ export default function Home() {
                         </div>
                         <div style={{display:'flex', gap:'8px', marginTop:'10px'}}>
                           <button onClick={()=>{setVideos(prev=>{const n={...prev}; delete n[s.id]; return n;}); setPrompts(prev=>({...prev, [s.id]:''}));}} style={{flex:1, padding:'10px', borderRadius:'999px', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'white', fontWeight:700, fontSize:'10px', cursor:'pointer'}}>{t.close}</button>
-                          <button onClick={()=>alert(`Download: ${video.url}`)} style={{flex:1, padding:'10px', borderRadius:'999px', background:'#D4AF37', color:'black', fontWeight:900, fontSize:'10px', border:'none', cursor:'pointer'}}>{t.download}</button>
+                          <button onClick={()=>{const a=document.createElement('a'); a.href=video.url; a.download=`supernova-${s.id}-${Date.now()}.mp4`; a.target='_blank'; document.body.appendChild(a); a.click(); a.remove();}} style={{flex:1, padding:'10px', borderRadius:'999px', background:'#D4AF37', color:'black', fontWeight:900, fontSize:'10px', border:'none', cursor:'pointer'}}>{t.download}</button>
                         </div>
                       </div>
                     )}
