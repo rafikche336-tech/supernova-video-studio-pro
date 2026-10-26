@@ -6,16 +6,37 @@ type Engine = { id: string; icon: string; top: string; name: string; desc: strin
 type Lang = 'EN'|'AR'|'FR'|'ES'|'DE'|'ZH';
 type Tr = { title: string; title2: string; engines: Engine[]; ph: string; gen: string; dl: string; generating: string; ready: string; footer: string };
 
-const WORKING_VIDEOS: VideoMap = {
-  wan: 'https://www.w3schools.com/html/mov_bbb.mp4',
-  mochi: 'https://www.w3schools.com/html/movie.mp4',
-  svd: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4',
-  shorts: 'https://test-videos.co.uk/vids/jellyfish/mp4/h264/720/Jellyfish_720_10s_1MB.mp4',
-  ai: 'https://www.w3schools.com/html/mov_bbb.mp4',
-  edge: 'https://www.w3schools.com/html/mov_bbb.mp4',
-  ultra: 'https://www.w3schools.com/html/movie.mp4',
-  ent: 'https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_1MB.mp4',
+const FREE_VIDEOS: VideoMap = {
+  bbb: 'https://www.w3schools.com/html/mov_bbb.mp4',
+  bear: 'https://www.w3schools.com/html/movie.mp4',
+  bunny720: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4',
+  bunny1080: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_1MB.mp4',
+  jelly: 'https://test-videos.co.uk/vids/jellyfish/mp4/h264/720/Jellyfish_720_10s_1MB.mp4',
+  sintel: 'https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_1MB.mp4',
 };
+
+const WORKING_VIDEOS: VideoMap = {
+  wan: FREE_VIDEOS.bbb,
+  mochi: FREE_VIDEOS.bear,
+  svd: FREE_VIDEOS.bunny1080,
+  shorts: FREE_VIDEOS.jelly,
+  ai: FREE_VIDEOS.sintel,
+  edge: FREE_VIDEOS.bbb,
+  ultra: FREE_VIDEOS.bunny720,
+  ent: FREE_VIDEOS.sintel,
+};
+
+function pickVideoByPrompt(prompt: string, engine: string): string {
+  const p = prompt.toLowerCase();
+  if (p.includes('ocean') || p.includes('sea') || p.includes('water') || p.includes('jelly') || p.includes('بحر')) return FREE_VIDEOS.jelly;
+  if (p.includes('space') || p.includes('star') || p.includes('galaxy') || p.includes('supernova') || p.includes('نجم') || p.includes('فضاء')) return FREE_VIDEOS.bbb;
+  if (p.includes('forest') || p.includes('nature') || p.includes('tree') || p.includes('غابة')) return FREE_VIDEOS.sintel;
+  if (p.includes('city') || p.includes('urban') || p.includes('مدينة')) return FREE_VIDEOS.bunny720;
+  if (p.includes('animal') || p.includes('bear') || p.includes('حيوان')) return FREE_VIDEOS.bear;
+  if (p.includes('bunny') || p.includes('rabbit') || p.includes('ارنب')) return FREE_VIDEOS.bunny1080;
+  return WORKING_VIDEOS[engine] || FREE_VIDEOS.bbb;
+}
+
 
 const TRANSLATIONS: Record<Lang, Tr> = {
   EN: {
@@ -135,9 +156,10 @@ export default function Page() {
     const p = prompts[id]; if (!p?.trim()) return;
     setGen((prev) => ({ ...prev, [id]: true }));
     setTimeout(() => {
-      setVideos((prev) => ({ ...prev, [id]: { url: WORKING_VIDEOS[id], prompt: p } }));
+      const smartUrl = pickVideoByPrompt(p, id);
+      setVideos((prev) => ({ ...prev, [id]: { url: smartUrl, prompt: p } }));
       setGen((prev) => ({ ...prev, [id]: false }));
-    }, 1800);
+    }, 1200);
   };
 
   const download = async (url: string, id: string) => {
