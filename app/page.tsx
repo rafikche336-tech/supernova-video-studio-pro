@@ -1,7 +1,9 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 
-const WORKING_VIDEOS: any = {
+type VideoMap = Record<string, string>;
+
+const WORKING_VIDEOS: VideoMap = {
   wan: 'https://www.w3schools.com/html/mov_bbb.mp4',
   mochi: 'https://www.w3schools.com/html/movie.mp4',
   svd: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4',
@@ -12,7 +14,29 @@ const WORKING_VIDEOS: any = {
   ent: 'https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_1MB.mp4',
 };
 
-const translations: any = {
+type Engine = {
+  id: string;
+  icon: string;
+  top: string;
+  name: string;
+  desc: string;
+  color: string;
+};
+
+type Translation = {
+  title1: string;
+  title2: string;
+  engines: Engine[];
+  open: string;
+  promptPh: string;
+  gen: string;
+  generating: string;
+  success: string;
+  download: string;
+  close: string;
+};
+
+const translations: Record<string, Translation> = {
   EN: { title1:'SUPERNOVA', title2:'VIDEO STUDIO', engines:[{id:'wan',icon:'WA',top:'Wan 2.2',name:'Wan 2.2 Cinematic',desc:'Cinematic Text-to-Video, 4K SOTA.',color:'rgba(212,175,55,0.14)'},{id:'mochi',icon:'MO',top:'Mochi 1',name:'Mochi 1 Natural',desc:'Natural motion, 24fps.',color:'rgba(120,119,198,0.14)'},{id:'svd',icon:'SV',top:'SVD',name:'SVD Studio',desc:'Image-to-Video.',color:'rgba(34,197,94,0.10)'},{id:'shorts',icon:'OS',top:'OpenShorts',name:'OpenShorts Engine',desc:'Long to Shorts.',color:'rgba(6,182,212,0.12)'},{id:'ai',icon:'AI',top:'AI',name:'AI Studio',desc:'Flow builder.',color:'rgba(168,85,247,0.12)'},{id:'edge',icon:'ED',top:'Edge',name:'Global Edge',desc:'Live map.',color:'rgba(16,185,129,0.08)'},{id:'ultra',icon:'UL',top:'V14',name:'V14 ULTRA',desc:'Next.js 14.',color:'rgba(212,175,55,0.15)'},{id:'ent',icon:'EN',top:'Ent',name:'Enterprise',desc:'Team.',color:'rgba(212,175,55,0.08)'}], open:'OPEN ENGINE →', promptPh:'Algiers at sunset, drone...', gen:'GENERATE VIDEO →', generating:'GENERATING...', success:'VIDEO READY ✓', download:'DOWNLOAD MP4 →', close:'CLOSE' },
   AR: { title1:'سوبرنوفا', title2:'استوديو فيديو', engines:[{id:'wan',icon:'WA',top:'Wan 2.2',name:'Wan 2.2 سينمائي',desc:'نص لفيديو.',color:'rgba(212,175,55,0.14)'},{id:'mochi',icon:'MO',top:'Mochi',name:'Mochi 1 طبيعي',desc:'حركة طبيعية.',color:'rgba(120,119,198,0.14)'},{id:'svd',icon:'SV',top:'SVD',name:'SVD ستوديو',desc:'صورة لفيديو.',color:'rgba(34,197,94,0.10)'},{id:'shorts',icon:'OS',top:'OS',name:'OpenShorts',desc:'طويل إلى قصير.',color:'rgba(6,182,212,0.12)'},{id:'ai',icon:'AI',top:'AI',name:'استوديو الذكاء',desc:'بناء.',color:'rgba(168,85,247,0.12)'},{id:'edge',icon:'ED',top:'Edge',name:'الحافة',desc:'اختبار.',color:'rgba(16,185,129,0.08)'},{id:'ultra',icon:'UL',top:'V14',name:'V14 الترا',desc:'قائمة.',color:'rgba(212,175,55,0.15)'},{id:'ent',icon:'EN',top:'Ent',name:'المؤسسات',desc:'فرق.',color:'rgba(212,175,55,0.08)'}], open:'افتح →', promptPh:'الجزائر غروب...', gen:'أنشئ →', generating:'جاري...', success:'جاهز ✓', download:'حمّل →', close:'إغلاق' },
   FR: { title1:'SUPERNOVA', title2:'STUDIO VIDÉO', engines:[{id:'wan',icon:'WA',top:'Wan 2.2',name:'Wan 2.2 Ciné',desc:'Texte-à-Vidéo.',color:'rgba(212,175,55,0.14)'},{id:'mochi',icon:'MO',top:'Mochi',name:'Mochi 1 Naturel',desc:'Mouvement naturel.',color:'rgba(120,119,198,0.14)'},{id:'svd',icon:'SV',top:'SVD',name:'SVD Studio',desc:'Image-à-Vidéo.',color:'rgba(34,197,94,0.10)'},{id:'shorts',icon:'OS',top:'OS',name:'OpenShorts',desc:'Long vers Short.',color:'rgba(6,182,212,0.12)'},{id:'ai',icon:'AI',top:'AI',name:'AI Studio',desc:'Flow builder.',color:'rgba(168,85,247,0.12)'},{id:'edge',icon:'ED',top:'Edge',name:'Global Edge',desc:'Ping.',color:'rgba(16,185,129,0.08)'},{id:'ultra',icon:'UL',top:'V14',name:'V14 ULTRA',desc:'Checklist.',color:'rgba(212,175,55,0.15)'},{id:'ent',icon:'EN',top:'Ent',name:'Entreprise',desc:'Contact.',color:'rgba(212,175,55,0.08)'}], open:'OUVRIR →', promptPh:'Alger coucher...', gen:'GÉNÉRER →', generating:'GÉNÉRATION...', success:'PRÊTE ✓', download:'TÉLÉCHARGER →', close:'FERMER' },
@@ -22,25 +46,24 @@ const translations: any = {
 };
 
 export default function Home() {
-  const [lang,setLang]=useState('EN');
+  const [lang,setLang]=useState<string>('EN');
   const [open,setOpen]=useState<string|null>(null);
-  const [prompts,setPrompts]=useState<{[k:string]:string}>({});
-  const [gen,setGen]=useState<{[k:string]:boolean}>({});
-  const [videos,setVideos]=useState<{[k:string]:{url:string,prompt:string}}>({});
+  const [prompts,setPrompts]=useState<Record<string,string>>({});
+  const [gen,setGen]=useState<Record<string,boolean>>({});
+  const [videos,setVideos]=useState<Record<string,{url:string,prompt:string}>>({});
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const t=translations[lang]||translations.EN;
 
   useEffect(()=>{
     const c=canvasRef.current; if(!c) return; const ctx=c.getContext('2d'); if(!ctx) return;
     c.width=window.innerWidth; c.height=window.innerHeight;
-    const stars=Array.from({length:150},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.3+0.2,o:Math.random()*0.6+0.1,d:Math.random()*0.02+0.005}));
-    let meteors:any[]=[];
-    const spawn=()=>{ if(Math.random()<0.015){ const sx=Math.random()*c.width*0.8+c.width*0.1; meteors.push({x:sx,y:-30,vx:Math.random()*2+1.5,vy:Math.random()*3+3,o:1}); } };
+    const stars=Array.from({length:180},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.5+0.3,o:Math.random()*0.8+0.2}));
+    const meteors:{x:number,y:number,vx:number,vy:number,life:number}[]=[];
     const anim=()=>{
-      ctx.clearRect(0,0,c.width,c.height);
-      stars.forEach(s=>{ s.o+=s.d; if(s.o>0.7||s.o<0.1) s.d*=-1; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fillStyle=`rgba(255,255,255,${s.o})`; ctx.fill(); });
-      spawn();
-      meteors.forEach((m:any,i:number)=>{ m.x+=m.vx; m.y+=m.vy; m.o-=0.008; const tx=m.x-m.vx*18,ty=m.y-m.vy*18; const g=ctx.createLinearGradient(m.x,m.y,tx,ty); g.addColorStop(0,`rgba(255,255,255,${m.o})`); g.addColorStop(0.15,`rgba(212,175,55,${m.o*0.9})`); g.addColorStop(0.4,`rgba(212,175,55,${m.o*0.3})`); g.addColorStop(1,`rgba(212,175,55,0)`); ctx.strokeStyle=g; ctx.lineWidth=1.8; ctx.lineCap='round' as any; ctx.beginPath(); ctx.moveTo(m.x,m.y); ctx.lineTo(tx,ty); ctx.stroke(); ctx.shadowBlur=8; ctx.shadowColor='rgba(212,175,55,0.8)'; ctx.beginPath(); ctx.arc(m.x,m.y,2.2,0,Math.PI*2); ctx.fillStyle=`rgba(255,255,255,${m.o})`; ctx.fill(); ctx.shadowBlur=0; if(m.o<=0||m.y>c.height+80) meteors.splice(i,1); });
+      if(!ctx||!c) return; ctx.clearRect(0,0,c.width,c.height);
+      stars.forEach(s=>{ ctx.fillStyle=`rgba(255,255,255,${s.o})`; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill(); });
+      if(Math.random()<0.02) meteors.push({x:Math.random()*c.width*0.6,y:-20,vx:2+Math.random()*3,vy:4+Math.random()*3,life:1});
+      meteors.forEach((m,i)=>{ m.x+=m.vx; m.y+=m.vy; m.life-=0.008; if(m.life<=0||m.y>c.height){ meteors.splice(i,1); return; } const grad=ctx.createLinearGradient(m.x,m.y,m.x-m.vx*12,m.y-m.vy*12); grad.addColorStop(0,`rgba(212,175,55,${m.life})`); grad.addColorStop(1,'transparent'); ctx.strokeStyle=grad; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(m.x,m.y); ctx.lineTo(m.x-m.vx*12,m.y-m.vy*12); ctx.stroke(); });
       requestAnimationFrame(anim);
     }; anim();
     const onR=()=>{ c.width=window.innerWidth; c.height=window.innerHeight; }; window.addEventListener('resize',onR); return()=>window.removeEventListener('resize',onR);
@@ -66,7 +89,7 @@ export default function Home() {
         <div style={{maxWidth:'1200px',margin:'0 auto',padding:'0 20px'}}>
           <div style={{padding:'40px 0 24px'}}><h1 style={{fontSize:'48px',fontWeight:900,lineHeight:0.95,letterSpacing:'-0.02em',margin:0,fontFamily:'system-ui, sans-serif',textTransform:'uppercase'}}>{t.title1} <span style={{color:'#D4AF37',textShadow:'0 0 30px rgba(212,175,55,0.5)'}}>V14</span><br/>{t.title2}</h1></div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))',gap:'16px'}}>
-            {t.engines.map((s:any)=>{
+            {t.engines.map((s)=>{
               const isG=gen[s.id]; const v=videos[s.id];
               return (<div key={s.id} onClick={()=>{if(!isG) setOpen(open===s.id?null:s.id)}} style={{borderRadius:'16px',border:open===s.id?'1px solid rgba(212,175,55,0.3)':'1px solid rgba(255,255,255,0.06)',background:`linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01)), radial-gradient(600px at 0% 0%, ${s.color}, transparent 60%), #0F0F12`,padding:'20px',cursor:'pointer',transition:'all 0.3s',minHeight:'160px',display:'flex',flexDirection:'column',justifyContent:'space-between',boxShadow:open===s.id?'0 12px 40px rgba(212,175,55,0.12)':'0 4px 24px rgba(0,0,0,0.4)'}}>
                 <div><div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}><div style={{width:'28px',height:'28px',borderRadius:'8px',background:'rgba(0,0,0,0.7)',border:'1px solid rgba(255,255,255,0.08)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'9px',fontWeight:700}}>{s.icon}</div><span style={{fontSize:'8px',padding:'4px 8px',borderRadius:'999px',background:v?'rgba(34,197,94,0.15)':'rgba(0,0,0,0.4)',border:`1px solid ${v?'rgba(34,197,94,0.2)':'rgba(255,255,255,0.05)'}`,color:v?'#22c55e':'rgba(255,255,255,0.35)',letterSpacing:'0.1em'}}>{v?'✓ READY':s.top}</span></div><h3 style={{fontSize:'13px',fontWeight:700,marginTop:'18px',marginBottom:0,fontFamily:'system-ui'}}>{s.name}</h3><p style={{fontSize:'11px',color:'rgba(255,255,255,0.42)',marginTop:'8px',lineHeight:1.5,fontFamily:'system-ui'}}>{s.desc}</p></div>
