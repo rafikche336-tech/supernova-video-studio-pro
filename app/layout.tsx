@@ -6,7 +6,7 @@ import { getEnv } from '@/lib/env';
 const siteUrl = getEnv().NEXT_PUBLIC_SITE_URL;
 
 const description =
-  'One studio for every engine: describe a shot, pick a profile, get video. Multi-engine UI with a pluggable render backend. Demo mode ships procedurally generated clips.';
+  'One studio for every engine: describe a shot, pick a profile, get video. Real text-to-video through fal.ai or Replicate, with a bundled demo renderer as the fallback.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

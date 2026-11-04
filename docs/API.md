@@ -1,163 +1,266 @@
 # API reference
 
-Base URL: your deployment origin (e.g. `https://studio.example.com`).
-All endpoints speak JSON. There is **no authentication** in this repository —
-add it before exposing a paid backend.
+Base URL: wherever the app runs (`http://localhost:3000` in development).
+All responses are JSON unless noted. All render endpoints are **owner-scoped**:
+another account's job id returns `404`, never `403`, so ids cannot be probed.
 
-> v1 exposed `POST /api/v14/render`. That path now returns a `308` redirect to
-> `/api/render` for backwards compatibility.
+## Authentication
+
+Sessions come from Auth.js and are carried in the `authjs.session-token` cookie.
+
+```http
+GET /api/auth/csrf                       → { "csrfToken": "…" }
+POST /api/auth/callback/guest            (form: csrfToken, callbackUrl)
+POST /api/auth/signin/github             (redirects to GitHub)
+GET  /api/auth/session                   → { "user": { "id", "name" }, "expires" }
+POST /api/auth/signout                   (form: csrfToken)
+```
+
+Browsers normally reach these through the login page; the integration suite drives
+them directly to prove the flow works.
+
+---
 
 ## `GET /api/render`
 
-Capability discovery / health check. Cacheable.
-
-```bash
-curl -s https://studio.example.com/api/render | jq
-```
+Public capability document: what this deployment can do _right now_. Cached for
+60 seconds (a changed key must not stay invisible for an hour).
 
 ```json
 {
   "status": "ok",
-  "mode": "demo",
+  "mode": "live",
   "maxPromptLength": 400,
-  "engines": ["wan", "mochi", "svd", "shorts", "ai", "edge", "ultra", "ent"]
+  "engines": ["wan", "mochi", "svd", "shorts", "ai", "edge", "ultra", "ent"],
+  "requiresAuth": true,
+  "provider": {
+    "id": "fal",
+    "model": "fal-ai/ltx-2/text-to-video/fast",
+    "live": true,
+    "requested": "auto",
+    "notice": null,
+    "fallback": "demo",
+    "configured": { "fal": true, "replicate": false }
+  }
 }
 ```
 
-| Status | Meaning                        |
-| ------ | ------------------------------ |
-| `200`  | Always, when the service is up |
-
-`Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400`
+- `mode` is `live` when a provider is configured, `demo` otherwise.
+- `provider.id` is the backend that will actually be used (`demo` when none is).
+- `provider.requested` echoes `RENDER_PROVIDER`; `provider.notice` explains a
+  downgrade (for example a forced provider without its key).
+- Keys themselves are never echoed — only booleans in `configured`.
 
 ## `POST /api/render`
 
-Creates a render job.
-
-### Request
+Requires a session. Creates a job owned by the caller.
 
 ```http
 POST /api/render
 Content-Type: application/json
 
-{
-  "prompt": "a cinematic ocean at sunset",
-  "engine": "wan"
-}
+{ "prompt": "a cinematic ocean at sunset", "engine": "wan" }
 ```
 
-| Field    | Type   | Required | Rules                                            |
-| -------- | ------ | -------- | ------------------------------------------------ |
-| `prompt` | string | yes      | trimmed, 1–400 characters, no control characters |
-| `engine` | string | yes      | one of the 8 ids from `GET /api/render`          |
-
-Unknown top-level fields are rejected (`strictObject`).
-
-### Responses
-
-**`202 Accepted`**
-
 ```json
+202 Accepted
 {
   "job": {
-    "id": "8f1c2b0e-5c4a-4d2b-9f7e-0a1b2c3d4e5f",
+    "id": "0f0c1f6a-…",
     "engine": "wan",
     "prompt": "a cinematic ocean at sunset",
     "status": "queued",
-    "progress": 0,
-    "createdAt": "2026-11-04T10:00:00.000Z",
-    "updatedAt": "2026-11-04T10:00:00.000Z"
+    "progress": 5,
+    "provider": "fal",
+    "createdAt": "2026-11-04T02:09:38.064Z",
+    "updatedAt": "2026-11-04T02:09:38.065Z"
   },
-  "mode": "demo"
+  "mode": "live",
+  "provider": "fal"
 }
 ```
 
-| Status | Body                  | When                                                  |
-| ------ | --------------------- | ----------------------------------------------------- |
-| `202`  | `{ job, mode }`       | Job accepted                                          |
-| `400`  | `{ error }`           | Body is not valid JSON                                |
-| `413`  | `{ error }`           | Body > 8 KB, or prompt > 400 characters               |
-| `422`  | `{ error, issues[] }` | Schema validation failed (see below)                  |
-| `429`  | `{ error }`           | Rate limited — honour `Retry-After`                   |
-| `501`  | `{ error, code }`     | `RENDER_PROVIDER=live` but not implemented/configured |
-| `500`  | `{ error }`           | Unexpected server error                               |
-
-**`422` example**
+If the live provider rejects the job (auth, out of credit, 5xx, timeout), the
+job is still created — against the demo renderer — and the response says so:
 
 ```json
+202 Accepted
 {
-  "error": "Invalid request.",
-  "issues": [
-    { "path": "engine", "message": "Invalid option: expected one of \"wan\"|…" },
-    { "path": "prompt", "message": "Prompt must be at most 400 characters" }
-  ]
+  "job": { "id": "…", "status": "queued", "provider": "demo" },
+  "mode": "demo",
+  "provider": "demo",
+  "fallback": true,
+  "notice": "The live provider rejected this job, so it was rendered as a demo clip. Check the server logs for the provider error."
 }
 ```
 
-**Rate limiting** — token bucket per client (first `X-Forwarded-For` hop, then
-`X-Real-IP`). Defaults: burst 12, refill 0.2/s (12 per minute). Override with
-`RATE_LIMIT_CAPACITY` / `RATE_LIMIT_REFILL_PER_SECOND`.
+`provider` is the backend that owns the job and never changes afterwards; read it
+off the finished job to know exactly what produced the clip.
+
+| Status | When                                                                 |
+| ------ | -------------------------------------------------------------------- |
+| `202`  | Job created                                                          |
+| `400`  | Body is not valid JSON                                               |
+| `401`  | No session                                                           |
+| `403`  | Cross-origin `Origin` header on a state-changing request             |
+| `413`  | Body > 8 KB or prompt > 400 characters                               |
+| `422`  | Schema failure, unknown key, or an engine outside the allow-list     |
+| `429`  | Rate limited — includes `Retry-After` and `X-RateLimit-Remaining: 0` |
+| `500`  | Unexpected database failure                                          |
+
+Field notes:
+
+- `prompt` — 1–400 characters, trimmed, whitespace-collapsed, control characters
+  rejected.
+- `engine` — one of the eight ids; anything else (including `__proto__`,
+  `constructor`, `toString`) is a `422` and no job is created.
+- Unknown keys are rejected instead of ignored.
 
 ## `GET /api/render/:id`
 
-Polls a job. `id` must be a UUID.
-
-```bash
-curl -s https://studio.example.com/api/render/$JOB_ID | jq '.job.status, .job.progress'
-```
-
-**`200 OK`**
+Polls one of your jobs. Each call mirrors provider progress into the database and,
+on completion, records the clip and duration.
 
 ```json
+200 OK
 {
   "job": {
-    "id": "8f1c2b0e-5c4a-4d2b-9f7e-0a1b2c3d4e5f",
+    "id": "0f0c1f6a-…",
     "engine": "wan",
     "prompt": "a cinematic ocean at sunset",
     "status": "succeeded",
     "progress": 100,
-    "videoUrl": "/media/ocean.mp4",
-    "posterUrl": "/media/posters/ocean.jpg",
-    "videoAlt": "Moonlit sea with soft rolling swells",
-    "createdAt": "2026-11-04T10:00:00.000Z",
-    "updatedAt": "2026-11-04T10:00:02.100Z"
+    "provider": "fal",
+    "videoUrl": "/api/media/0f0c1f6a-…",
+    "createdAt": "…",
+    "updatedAt": "…"
   }
 }
 ```
 
-| Status | When                                        |
-| ------ | ------------------------------------------- |
-| `200`  | Job exists and has not expired (10 min TTL) |
-| `404`  | Unknown id, expired job, or a malformed id  |
-| `500`  | Provider lookup failed                      |
+Demo and fallback jobs look the same except that `provider` is `demo` and
+`videoUrl` is a bundled `/media/<clip>.mp4`:
 
-`status` values: `queued` → `running` → `succeeded` **or** `failed`
-(`failed` jobs carry an `error` string).
+```json
+{
+  "provider": "demo",
+  "clip": "ocean",
+  "videoUrl": "/media/ocean.mp4",
+  "posterUrl": "/media/posters/ocean.jpg"
+}
+```
 
-### Client behaviour
+`404` for unknown ids, malformed ids, or jobs owned by someone else. A job whose
+provider has forgotten it is failed after a 90-second grace window, with an
+`error` explaining that the job expired.
 
-The bundled UI polls every 350 ms with a 60 s budget, and cancels cleanly on
-unmount or when the user presses Cancel. See `hooks/useRenderJob.ts`.
+`501` only when the stored job belongs to a provider that is no longer configured
+(e.g. `RENDER_PROVIDER=demo` while a `fal:` job is still polling) — the message
+says which provider is missing.
 
-## `GET /media/:file`
+## `GET /api/renders?limit=6`
 
-Static demo clips (self-hosted, MP4 / H.264, 960×540, 3 s each).
+The signed-in user's most recent renders (max 24), used by the studio's history
+rail.
 
-`Cache-Control: public, max-age=31536000, immutable`.
+```json
+{ "renders": [{ "id": "…", "status": "succeeded", "videoUrl": "/media/neon.mp4" }] }
+```
 
-| File         | Engine default |
-| ------------ | -------------- |
-| `space.mp4`  | `wan`          |
-| `silk.mp4`   | `mochi`, `ent` |
-| `ocean.mp4`  | `svd`          |
-| `city.mp4`   | `shorts`       |
-| `gold.mp4`   | `ai`, `ultra`  |
-| `forest.mp4` | `edge`         |
+## `GET /api/media/:id`
 
-Posters live in `/media/posters/<name>.jpg`.
+Streams a finished MP4 **inline** — this is what the `<video>` elements use.
 
-## Error model
+```http
+200 OK
+Content-Type: video/mp4
+Accept-Ranges: bytes
+Cache-Control: private, max-age=3600
+```
 
-Errors always use `{ "error": string }`, plus `issues[]` for validation failures
-and `code` for provider errors. No error response ever contains a stack trace or
-echoes unbounded user input.
+```http
+GET /api/media/:id
+Range: bytes=0-1023
+
+206 Partial Content
+Content-Range: bytes 0-1023/1834211
+```
+
+- Owner or shared — anything else is a `404`.
+- Source order: local copy in `MEDIA_DIR` → bundled `/media/<clip>.mp4` for demo
+  renders → the provider's URL proxied server-side → `404`.
+- Only `video/mp4` is ever served, never a caller-supplied path.
+
+## `GET /api/download/:id`
+
+Streams the finished MP4 from disk as an attachment.
+
+```http
+200 OK
+Content-Type: video/mp4
+Content-Disposition: attachment; filename="supernova-wan-0f0c1f6a.mp4"
+Cache-Control: private, max-age=0, must-revalidate
+```
+
+- Owner only — **or** anyone if the render has been shared.
+- Anything else is a `404` (identical to "does not exist").
+- Same source order as `/api/media/:id`, including the bundled demo clips, so the
+  download button works in demo mode too.
+- The route resolves the render id to a file name itself; no path from the request
+  reaches the filesystem.
+
+## `POST /api/share/:id`
+
+Publishes a finished render. Idempotent: calling it twice returns the same slug.
+
+```json
+{ "slug": "qhd3tq34mc", "url": "https://example.com/s/qhd3tq34mc" }
+```
+
+| Status | When                          |
+| ------ | ----------------------------- |
+| `200`  | Shared (new or existing slug) |
+| `401`  | No session                    |
+| `403`  | Cross-origin                  |
+| `404`  | Not your render / unknown id  |
+| `409`  | Render has not finished yet   |
+
+## `GET /s/:slug`
+
+Public HTML page (not JSON) with per-render Open Graph and Twitter metadata, a
+player, a public download link and `noindex`. Unknown or unfinished slugs return a
+real `404` from `middleware.ts`.
+
+---
+
+## Errors
+
+```json
+{ "error": "Invalid request.", "issues": [{ "path": "engine", "message": "…" }] }
+```
+
+`error` is always safe to show to a user; `issues` appears only for validation
+failures. Internal details are logged server-side, never returned.
+
+## Rate limiting
+
+Token bucket per user id (IP for unauthenticated calls), default 12 burst tokens
+and 0.2 tokens/second. Applies to `POST /api/render`.
+
+## Headers on every response
+
+`Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `X-Frame-Options:
+DENY`, `Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security`,
+`Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`. `X-Powered-By` is
+disabled.
+
+## Provider errors
+
+Provider failures never surface as a raw exception. `POST /api/render` falls back
+to the demo renderer (see above); a poll that hits an unrecoverable provider error
+fails the job with a readable `error`, and the message is redacted so an API key
+can never appear in a response or a log line.
+
+## Compatibility
+
+`/api/v14/render` permanently redirects (`308`) to `/api/render`.

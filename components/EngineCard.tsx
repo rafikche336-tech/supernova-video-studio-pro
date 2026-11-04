@@ -1,9 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useId, useState, type FormEvent } from 'react';
 import { useRenderJob } from '@/hooks/useRenderJob';
 import type { EngineDefinition } from '@/lib/engines/registry';
 import type { Dictionary, Locale } from '@/lib/i18n';
+import { renderSourceNote } from '@/lib/render/labels';
+import type { RenderJob } from '@/lib/render/types';
+import { ShareButton } from './ShareButton';
 import { VideoPreview } from './VideoPreview';
 import styles from './EngineCard.module.css';
 
@@ -11,6 +15,8 @@ export interface EngineCardProps {
   readonly engine: EngineDefinition;
   readonly dictionary: Dictionary;
   readonly locale: Locale;
+  /** Called once a job succeeds, so the studio can refresh its history rail. */
+  readonly onRendered?: (job: RenderJob) => void;
 }
 
 /**
@@ -21,7 +27,7 @@ export interface EngineCardProps {
  * changes are announced through a polite live region. v1 used a clickable
  * `<div>` that keyboard users could not open at all.
  */
-export function EngineCard({ engine, dictionary, locale }: EngineCardProps) {
+export function EngineCard({ engine, dictionary, locale, onRendered }: EngineCardProps) {
   const [prompt, setPrompt] = useState('');
   const [expanded, setExpanded] = useState(false);
 
@@ -29,12 +35,13 @@ export function EngineCard({ engine, dictionary, locale }: EngineCardProps) {
   const promptId = useId();
   const summaryId = useId();
 
-  const job = useRenderJob();
+  const job = useRenderJob({ onComplete: onRendered });
 
   const trimmedPrompt = prompt.trim();
   const isBusy = job.phase === 'submitting' || job.phase === 'rendering';
   const canSubmit = trimmedPrompt.length > 0 && !isBusy;
   const videoUrl = job.job?.videoUrl;
+  const sourceNote = job.phase === 'succeeded' ? renderSourceNote(job.job?.provider) : null;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -120,9 +127,15 @@ export function EngineCard({ engine, dictionary, locale }: EngineCardProps) {
             <div className={styles.failed}>
               <p className={styles.errorText}>{dictionary.failed}</p>
               {job.error ? <p className={styles.errorDetail}>{job.error}</p> : null}
-              <button type="button" className={styles.secondary} onClick={job.reset}>
-                {dictionary.retry}
-              </button>
+              {job.requiresAuth ? (
+                <Link className={styles.secondary} href="/login?next=/studio">
+                  {dictionary.signIn}
+                </Link>
+              ) : (
+                <button type="button" className={styles.secondary} onClick={job.reset}>
+                  {dictionary.retry}
+                </button>
+              )}
             </div>
           ) : null}
         </div>
@@ -135,9 +148,26 @@ export function EngineCard({ engine, dictionary, locale }: EngineCardProps) {
               alt={job.job?.videoAlt ?? engine.name}
               fallbackText={dictionary.videoUnsupported}
             />
-            <a className={styles.download} href={videoUrl} download={`supernova-${engine.id}.mp4`}>
-              {dictionary.download}
-            </a>
+            <div className={styles.resultActions}>
+              <a
+                className={styles.download}
+                href={`/api/download/${job.job?.id ?? ''}`}
+                download={`supernova-${engine.id}.mp4`}
+              >
+                {dictionary.download}
+              </a>
+              {job.job ? (
+                <ShareButton
+                  renderId={job.job.id}
+                  title={job.job.prompt}
+                  label={dictionary.share}
+                  copiedLabel={dictionary.shareCopied}
+                  compact
+                />
+              ) : null}
+            </div>
+
+            {sourceNote ? <p className={styles.providerNote}>{sourceNote}</p> : null}
           </div>
         ) : null}
       </div>

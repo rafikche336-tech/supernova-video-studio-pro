@@ -1,8 +1,8 @@
 {
   "name": "supernova-video-studio",
-  "version": "2.0.0",
+  "version": "3.1.0",
   "private": true,
-  "description": "All-in-one AI video studio UI — multi-engine prompt studio with a pluggable render backend (demo mode by default).",
+  "description": "All-in-one AI video studio UI \u2014 multi-engine prompt studio with a pluggable render backend (demo mode by default).",
   "author": {
     "name": "SupernovaSolutionsHQ",
     "url": "https://github.com/rafikche336-tech/supernova-video-studio-pro"
@@ -21,29 +21,34 @@
   },
   "packageManager": "npm@10.9.8",
   "scripts": {
-    "dev": "next dev",
+    "audit:ci": "npm audit --audit-level=high",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "dev": "next dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "media:generate": "python3 scripts/generate-demo-clips.py",
+    "seed": "node scripts/seed.mjs",
+    "seed:reset": "node scripts/seed.mjs --reset",
+    "start": "next start",
     "test": "vitest run",
-    "test:watch": "vitest",
     "test:integration": "node scripts/integration-test.mjs",
-    "audit:ci": "npm audit --audit-level=high",
-    "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
-    "media:generate": "python3 scripts/generate-demo-clips.py"
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
   "dependencies": {
+    "better-sqlite3": "^13.0.3",
     "next": "16.4.5",
+    "next-auth": "^5.0.0-beta.32",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "3.3.1",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "22.20.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",

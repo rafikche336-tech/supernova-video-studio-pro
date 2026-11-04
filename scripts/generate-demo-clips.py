@@ -362,6 +362,396 @@ def scene_silk(t: float) -> Canvas:
     return c
 
 
+
+
+# ----------------------------------------------------------------------------- extended set
+# Each scene below is vectorised numpy arithmetic (no per-pixel Python loops) so a
+# 3-second 540p clip renders in well under a minute.
+
+
+def _blobs(buf: np.ndarray, xs: np.ndarray, ys: np.ndarray, colours: np.ndarray) -> None:
+    """Additive point sprites with a tiny 3x3 softening kernel."""
+    xi = np.clip(xs.astype(int), 0, WIDTH - 1)
+    yi = np.clip(ys.astype(int), 0, HEIGHT - 1)
+    for dx, dy, weight in ((0, 0, 1.0), (1, 0, 0.45), (-1, 0, 0.45), (0, 1, 0.45), (0, -1, 0.45)):
+        np.add.at(buf, (np.clip(yi + dy, 0, HEIGHT - 1), np.clip(xi + dx, 0, WIDTH - 1)),
+                  colours * weight)
+
+
+def scene_desert(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((52, 26, 18), (214, 138, 74), power=0.55)
+    c.radial_glow(0.72, 0.30, 0.42, (255, 196, 120), 0.9)
+    xs = np.arange(0, WIDTH + 6, 6, dtype=np.float32)
+    for layer, (base, colour, amp) in enumerate(
+        [(0.52, (120, 62, 40), 1.0), (0.66, (86, 42, 30), 1.5), (0.82, (52, 24, 20), 2.1)]
+    ):
+        ys = HEIGHT * base + amp * 22 * np.sin(xs * (0.006 + layer * 0.003) + t * (0.4 + layer * 0.3))
+        ridge = np.clip(ys.astype(int), 0, HEIGHT - 1)
+        for i in range(len(xs) - 1):
+            x0, x1 = int(xs[i]), min(int(xs[i + 1]) + 1, WIDTH)
+            if x0 >= WIDTH:
+                break
+            c.buf[ridge[i]:, x0:x1] = c.buf[ridge[i]:, x0:x1] * 0.25 + np.array(colour, np.float32) * 0.75
+        c.glow_line(xs, ys, tuple(np.array(colour, np.float32) * 1.4), width=0.7, strength=0.3)
+    c.vignette(0.45)
+    c.grain(np.random.default_rng(int(t * 1000) + 11), 1.4)
+    return c
+
+
+AURORA_BANDS = [(0.10, (40, 220, 150)), (0.16, (40, 160, 220)), (0.08, (150, 60, 220))]
+
+
+def scene_aurora(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((3, 8, 18), (1, 3, 8))
+    sx, sy, sb, sp = build_stars(31, 150)
+    _blobs(c.buf, sx, sy * 0.6, np.repeat((sb * 120)[:, None], 3, axis=1))
+    for index, (height, colour) in enumerate(AURORA_BANDS):
+        for ribbon in range(3):
+            xs = np.arange(0, WIDTH + 8, 8, dtype=np.float32)
+            ys = HEIGHT * (0.18 + height + ribbon * 0.05)
+            ys = ys + 26 * np.sin(xs * 0.004 + t * (0.7 + index * 0.2) + ribbon) + 12 * np.sin(
+                xs * 0.011 - t * 1.3
+            )
+            c.glow_line(xs, ys, tuple(np.array(colour, np.float32)), width=14 - ribbon * 3, strength=0.10)
+            c.glow_line(xs, ys, tuple(np.array(colour, np.float32) * 1.6), width=3.5, strength=0.16)
+    c.vignette(0.5)
+    c.grain(np.random.default_rng(int(t * 1000) + 12), 1.0)
+    return c
+
+
+SNOW = np.random.default_rng(41).random((320, 4))
+
+
+def scene_snow(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((18, 26, 38), (52, 62, 78))
+    for layer, (base, col) in enumerate([(0.62, (70, 80, 96)), (0.75, (48, 56, 70)), (0.9, (30, 36, 48))]):
+        xs = np.arange(0, WIDTH + 6, 6, dtype=np.float32)
+        ys = HEIGHT * base + 18 * np.sin(xs * (0.005 + layer * 0.004) + layer)
+        ridge = np.clip(ys.astype(int), 0, HEIGHT - 1)
+        for i in range(len(xs) - 1):
+            x0, x1 = int(xs[i]), min(int(xs[i + 1]) + 1, WIDTH)
+            if x0 >= WIDTH:
+                break
+            c.buf[ridge[i]:, x0:x1] = np.array(col, np.float32)
+    for px, py, speed, size in SNOW:
+        y = (py * HEIGHT + t * (30 + speed * 70)) % (HEIGHT + 20) - 10
+        x = px * WIDTH + 18 * math.sin(t * (0.6 + speed) + py * 9)
+        bright = 150 + size * 105
+        _blobs(c.buf, np.array([x]), np.array([y]), np.array([[bright, bright, bright * 1.03]]))
+    c.vignette(0.4)
+    c.grain(np.random.default_rng(int(t * 1000) + 13), 1.2)
+    return c
+
+
+RAIN = np.random.default_rng(53).random((130, 4))
+
+
+def scene_neon(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((6, 4, 14), (2, 1, 6))
+    c.radial_glow(0.28, 0.55, 0.5, (120, 20, 120), 0.5)
+    c.radial_glow(0.74, 0.5, 0.5, (20, 110, 140), 0.45)
+    for index, px in enumerate(np.linspace(0.08, 0.92, 7)):
+        x = px * WIDTH
+        hue = np.array([235, 60, 210], np.float32) if index % 2 == 0 else np.array([60, 200, 235], np.float32)
+        c.glow_line(np.array([x, x]), np.array([HEIGHT * 0.42, HEIGHT]), tuple(hue * 0.55), width=2.0, strength=0.5)
+        c.glow_line(np.array([x - 16, x + 16]), np.array([HEIGHT - 40, HEIGHT - 40]), tuple(hue), width=1.2, strength=0.5)
+    for px, py, speed, length in RAIN:
+        y = (py * HEIGHT + t * (420 + speed * 260)) % (HEIGHT + 60) - 30
+        x = px * WIDTH + (y * 0.18)
+        c.glow_line(np.array([x, x - length * 12]), np.array([y, y + length * 40]),
+                    (150, 200, 255), width=0.7, strength=0.35)
+    c.vignette(0.5)
+    c.grain(np.random.default_rng(int(t * 1000) + 14), 1.4)
+    return c
+
+
+EMBERS = np.random.default_rng(67).random((140, 4))
+
+
+def scene_embers(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((10, 4, 3), (28, 8, 4))
+    c.radial_glow(0.5, 1.02, 0.75, (220, 90, 20), 0.6)
+    for px, py, speed, size in EMBERS:
+        y = HEIGHT * (1.05 - (py + t * (0.10 + speed * 0.18)) % 1.05)
+        x = px * WIDTH + 30 * math.sin(t * (0.8 + speed) + py * 12)
+        life = min(1.0, (HEIGHT - y) / (HEIGHT * 0.35))
+        heat = np.array([255, 120 + size * 90, 40], np.float32) * (0.35 + 0.65 * life) * (0.4 + size * 0.6)
+        _blobs(c.buf, np.array([x]), np.array([y]), heat[None, :])
+    c.vignette(0.55)
+    c.grain(np.random.default_rng(int(t * 1000) + 15), 1.3)
+    return c
+
+
+def scene_ink(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((14, 10, 22), (4, 3, 8))
+    warp = np.sin(c.nx * 4.2 + t * 0.9) * np.cos(c.ny * 3.4 - t * 0.7)
+    f1 = np.sin((c.nx + warp * 0.22) * 6.0 - t * 1.1) * np.cos((c.ny - warp * 0.16) * 5.0 + t * 0.8)
+    f2 = np.sin((c.nx - warp * 0.3) * 3.0 + t * 0.6) * np.sin((c.ny + warp * 0.2) * 7.0 - t * 0.9)
+    ink = np.clip((f1 + f2) * 0.5 + 0.5, 0, 1) ** 2
+    c.buf -= ink[..., None] * np.array([10, 12, 18], np.float32)
+    c.buf += (1 - ink)[..., None] * np.array([58, 26, 96], np.float32) * 0.55
+    c.radial_glow(0.5, 0.45, 0.5, (120, 80, 180), 0.28)
+    c.vignette(0.55)
+    c.grain(np.random.default_rng(int(t * 1000) + 16), 1.1)
+    return c
+
+
+def scene_underwater(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((6, 46, 62), (2, 14, 26))
+    c.radial_glow(0.5, -0.05, 0.75, (120, 220, 230), 0.55)
+    for band in range(9):
+        for offset in (0.0, 0.5):
+            phase = t * (1.1 + band * 0.06) + band * 0.9 + offset
+            centre = 0.5 + 0.34 * math.sin(phase * 0.8)
+            width = 0.045 + 0.02 * math.sin(phase * 1.3)
+            mask = np.exp(-(((c.nx - centre) / width) ** 2 + ((c.ny - 0.35) / 0.9) ** 2))
+            c.buf += np.array([120, 210, 210], np.float32) * (mask[..., None] * 0.11)
+    c.vignette(0.45)
+    c.grain(np.random.default_rng(int(t * 1000) + 17), 1.2)
+    return c
+
+
+def scene_ruins(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((40, 32, 30), (150, 116, 86), power=0.6)
+    c.radial_glow(0.5, 0.42, 0.5, (230, 180, 120), 0.5)
+    rng = np.random.default_rng(77)
+    for index in range(9):
+        x = int(WIDTH * (0.06 + index * 0.11) + rng.integers(-10, 10))
+        height = int(HEIGHT * (0.28 + rng.random() * 0.3))
+        width = int(14 + rng.random() * 12)
+        top = int(HEIGHT * 0.62) - height
+        c.buf[top: int(HEIGHT * 0.86), x: x + width] = np.array([38, 30, 26], np.float32)
+        c.buf[top - 10: top, x - 4: x + width + 4] = np.array([52, 42, 36], np.float32)
+    c.glow_line(np.arange(0, WIDTH + 4, 4, dtype=np.float32),
+                np.full(len(np.arange(0, WIDTH + 4, 4)), HEIGHT * 0.86, np.float32),
+                (70, 56, 44), width=2.0, strength=0.4)
+    dust = np.random.default_rng(int(t * 1000) + 18).random((60, 3))
+    for px, py, size in dust:
+        x = (px * WIDTH + t * 24) % WIDTH
+        y = (py * HEIGHT - t * 9) % HEIGHT
+        _blobs(c.buf, np.array([x]), np.array([y]), np.array([[180, 160, 130]]) * size)
+    c.vignette(0.5)
+    c.grain(np.random.default_rng(int(t * 1000) + 18), 1.5)
+    return c
+
+
+def scene_clouds(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((30, 48, 72), (128, 140, 158))
+    field = np.zeros((HEIGHT, WIDTH), np.float32)
+    for octave, (freq, amp) in enumerate([(2.2, 1.0), (5.0, 0.5), (11.0, 0.25), (23.0, 0.12)]):
+        field += amp * np.sin(c.nx * freq + c.ny * freq * 0.45 + t * (0.35 + octave * 0.12) + octave)
+    cloud = np.clip(field / 1.87 * 0.5 + 0.5, 0, 1) ** 1.6
+    c.buf += cloud[..., None] * np.array([190, 198, 214], np.float32) * 0.85
+    c.buf += (1 - cloud)[..., None] * np.array([28, 40, 62], np.float32) * 0.5
+    c.vignette(0.35)
+    c.grain(np.random.default_rng(int(t * 1000) + 19), 1.1)
+    return c
+
+
+def scene_lava(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((18, 6, 4), (6, 3, 2))
+    field = np.sin(c.nx * 9.0 + t * 1.4) * np.cos(c.ny * 7.0 - t * 1.1) + np.sin(
+        (c.nx + c.ny) * 13.0 - t * 2.1
+    )
+    crack = np.clip(1.0 - np.abs(field) * 1.15, 0, 1) ** 3
+    c.buf += crack[..., None] * np.array([255, 128, 30], np.float32) * 1.0
+    c.buf += (crack**0.5)[..., None] * np.array([180, 40, 10], np.float32) * 0.7
+    c.vignette(0.5)
+    c.grain(np.random.default_rng(int(t * 1000) + 20), 1.6)
+    return c
+
+
+FIREWORK_BURSTS = [(0.25, 0.35, 0.0, (255, 210, 120)), (0.62, 0.28, 0.9, (140, 200, 255)),
+                   (0.45, 0.5, 1.8, (255, 150, 190)), (0.8, 0.42, 2.5, (170, 255, 190))]
+
+
+def scene_fireworks(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((3, 4, 12), (8, 6, 14))
+    angles = np.linspace(0, math.tau, 46, endpoint=False)
+    for bx, by, offset, colour in FIREWORK_BURSTS:
+        local = (t - offset) % 2.9
+        if local > 2.2:
+            continue
+        radius = 14 + local * 120
+        fade = max(0.0, 1 - local / 2.2) ** 1.5
+        xs = bx * WIDTH + np.cos(angles) * radius
+        ys = by * HEIGHT + np.sin(angles) * radius * 0.9 + local * local * 26
+        colours = np.repeat((np.array(colour, np.float32) * fade)[None, :], len(angles), axis=0)
+        _blobs(c.buf, xs, ys, colours)
+    c.vignette(0.45)
+    c.grain(np.random.default_rng(int(t * 1000) + 21), 1.3)
+    return c
+
+
+PEAKS = [(0.58, (46, 54, 76), 1.0), (0.68, (30, 36, 54), 1.5), (0.8, (18, 22, 34), 2.2)]
+
+
+def scene_mountain(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((12, 16, 34), (120, 96, 96), power=0.7)
+    c.radial_glow(0.62, 0.34, 0.4, (250, 190, 140), 0.75)
+    xs = np.arange(0, WIDTH + 4, 4, dtype=np.float32)
+    for index, (base, colour, sharp) in enumerate(PEAKS):
+        ys = HEIGHT * base
+        for k in range(3):
+            ys = ys + (26 - index * 7) * np.sin(xs * (0.004 + k * 0.003) * sharp + index * 2 + t * 0.12)
+        ridge = np.clip(ys.astype(int), 0, HEIGHT - 1)
+        for i in range(len(xs) - 1):
+            x0, x1 = int(xs[i]), min(int(xs[i + 1]) + 1, WIDTH)
+            if x0 >= WIDTH:
+                break
+            c.buf[ridge[i]:, x0:x1] = np.array(colour, np.float32)
+        c.glow_line(xs, ys, tuple(np.array(colour, np.float32) * 1.6), width=1.0, strength=0.22)
+    c.vignette(0.42)
+    c.grain(np.random.default_rng(int(t * 1000) + 22), 1.3)
+    return c
+
+
+BOKEH = np.random.default_rng(91).random((26, 4))
+
+
+def scene_rainwindow(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((16, 20, 30), (6, 8, 14))
+    for px, py, size, hue in BOKEH:
+        x = px * WIDTH
+        y = py * HEIGHT * 0.75
+        radius = 18 + size * 54
+        colour = np.array([255, 190, 120], np.float32) if hue > 0.5 else np.array([110, 170, 255], np.float32)
+        mask = np.exp(-(((c.x - x) ** 2 + (c.y - y) ** 2) / (radius**2 * 1.6)))
+        c.buf += colour * (mask[..., None] * 0.16)
+    streaks = np.random.default_rng(int(t * 3) + 5).random((70, 3))
+    for px, py, speed in streaks:
+        x = px * WIDTH
+        y = (py * HEIGHT + t * (90 + speed * 200)) % (HEIGHT + 80) - 40
+        c.glow_line(np.array([x, x]), np.array([y, y + 24 + speed * 40]), (190, 210, 240), width=1.0,
+                    strength=0.16)
+    c.vignette(0.5)
+    c.grain(np.random.default_rng(int(t * 1000) + 23), 1.2)
+    return c
+
+
+def scene_cyber(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((8, 2, 16), (2, 1, 8))
+    horizon = HEIGHT * 0.52
+    c.radial_glow(0.5, horizon, 0.6, (200, 40, 160), 0.5)
+    sky = c.ny < horizon / HEIGHT
+    for i in range(14):
+        y = horizon + (HEIGHT - horizon) * (i / 14) ** 2
+        colour = (np.array([240, 60, 200], np.float32) if i % 3 else np.array([60, 220, 240], np.float32))
+        c.glow_line(np.array([0, WIDTH], np.float32), np.array([y, y], np.float32), tuple(colour),
+                    width=0.9, strength=0.30)
+    for k in range(-9, 10):
+        x_bottom = WIDTH / 2 + k * WIDTH * 0.16
+        c.glow_line(np.array([WIDTH / 2, x_bottom], np.float32),
+                    np.array([horizon, HEIGHT], np.float32), (60, 220, 240), width=0.8, strength=0.18)
+    scan = (t * 0.35) % 1.0
+    c.glow_line(np.array([0, WIDTH], np.float32),
+                np.array([horizon + (HEIGHT - horizon) * scan] * 2, np.float32),
+                (240, 60, 200), width=1.6, strength=0.35)
+    c.buf += np.where(sky[..., None], np.array([18, 4, 30], np.float32), 0.0)
+    c.vignette(0.45)
+    c.grain(np.random.default_rng(int(t * 1000) + 24), 1.3)
+    return c
+
+
+def scene_storm(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((14, 16, 24), (40, 42, 52))
+    field = np.zeros((HEIGHT, WIDTH), np.float32)
+    for freq, amp in [(2.0, 1.0), (4.6, 0.55), (9.0, 0.3)]:
+        field += amp * np.sin(c.nx * freq + t * 0.3 + c.ny * freq * 0.6)
+    cloud = np.clip(field / 1.85 * 0.5 + 0.5, 0, 1) ** 1.4
+    c.buf += cloud[..., None] * np.array([54, 58, 70], np.float32) * 0.9
+    # lightning flashes on a fixed rhythm
+    flash = max(0.0, math.sin(t * 3.1)) ** 24
+    if flash > 0.05:
+        c.buf += np.array([220, 230, 255], np.float32) * flash * 0.55
+        rng = np.random.default_rng(int(t * 8))
+        x = WIDTH * (0.3 + rng.random() * 0.4)
+        y = HEIGHT * 0.2
+        for _ in range(7):
+            x2 = x + rng.normal(0, 46)
+            y2 = y + rng.uniform(30, 60)
+            c.glow_line(np.array([x, x2], np.float32), np.array([y, y2], np.float32), (240, 245, 255),
+                        width=1.4, strength=flash)
+            x, y = x2, y2
+    c.vignette(0.5)
+    c.grain(np.random.default_rng(int(t * 1000) + 25), 1.5)
+    return c
+
+
+PETALS = np.random.default_rng(103).random((70, 4))
+
+
+def scene_blossom(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((60, 40, 48), (150, 120, 128))
+    c.radial_glow(0.35, 0.25, 0.6, (255, 214, 224), 0.5)
+    for px, py, speed, size in PETALS:
+        y = (py * HEIGHT + t * (26 + speed * 46)) % (HEIGHT + 40) - 20
+        x = px * WIDTH + 40 * math.sin(t * (0.5 + speed) + py * 10)
+        pink = np.array([255, 190 + size * 40, 205], np.float32) * (0.5 + size * 0.5)
+        _blobs(c.buf, np.array([x]), np.array([y]), pink[None, :])
+    c.vignette(0.42)
+    c.grain(np.random.default_rng(int(t * 1000) + 26), 1.2)
+    return c
+
+
+GALAXY_STARS = np.random.default_rng(113).random((900, 3))
+
+
+def scene_galaxy(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((4, 4, 12), (1, 1, 5))
+    cx, cy = 0.5, 0.5
+    arms = 3
+    for px, py, bright in GALAXY_STARS:
+        arm = int(px * arms)
+        radius = 0.04 + (py**1.6) * 0.44
+        angle = arm * (math.tau / arms) + radius * 7.0 + t * 0.12 + px * 0.6
+        x = (cx + radius * math.cos(angle)) * WIDTH
+        y = (cy + radius * math.sin(angle) * 0.62) * HEIGHT
+        tint = np.array([200 + bright * 55, 190 + bright * 50, 255], np.float32) * (0.35 + bright * 0.65)
+        _blobs(c.buf, np.array([x]), np.array([y]), tint[None, :] * 0.5)
+    mask = np.exp(-(((c.nx - cx) ** 2 + ((c.ny - cy) * 1.6) ** 2) / 0.055))
+    c.buf += np.array([130, 110, 200], np.float32) * (mask[..., None] * 0.35)
+    c.radial_glow(cx, cy, 0.14, (255, 240, 220), 0.85)
+    c.vignette(0.5)
+    c.grain(np.random.default_rng(int(t * 1000) + 27), 1.1)
+    return c
+
+
+def scene_tunnel(t: float) -> Canvas:
+    c = Canvas()
+    c.vertical_gradient((4, 5, 10), (2, 2, 6))
+    angle = np.arctan2(c.ny - 0.5, (c.nx - 0.5) * (WIDTH / HEIGHT))
+    radius = np.sqrt((c.nx - 0.5) ** 2 + ((c.ny - 0.5) * (HEIGHT / WIDTH)) ** 2)
+    phase = np.sin(angle * 12 + t * 2.4)
+    lines = np.clip(1.0 - np.abs(phase) * 3.2, 0, 1) ** 2
+    depth = np.clip(1.0 - radius * 1.7, 0, 1) ** 1.4
+    c.buf += lines[..., None] * depth[..., None] * np.array([212, 175, 55], np.float32) * 0.9
+    for ring in range(6):
+        r = 0.06 + ((ring / 6 + t * 0.22) % 1.0) * 0.55
+        mask = np.exp(-(((radius - r) / 0.012) ** 2))
+        c.buf += np.array([120, 150, 220], np.float32) * (mask[..., None] * 0.25)
+    c.vignette(0.35)
+    c.grain(np.random.default_rng(int(t * 1000) + 28), 1.2)
+    return c
+
+
 @dataclass(frozen=True)
 class Clip:
     name: str
@@ -375,6 +765,24 @@ CLIPS = [
     Clip("city", scene_city),
     Clip("gold", scene_gold),
     Clip("silk", scene_silk),
+    Clip("desert", scene_desert),
+    Clip("aurora", scene_aurora),
+    Clip("snow", scene_snow),
+    Clip("neon", scene_neon),
+    Clip("embers", scene_embers),
+    Clip("ink", scene_ink),
+    Clip("underwater", scene_underwater),
+    Clip("ruins", scene_ruins),
+    Clip("clouds", scene_clouds),
+    Clip("lava", scene_lava),
+    Clip("fireworks", scene_fireworks),
+    Clip("mountain", scene_mountain),
+    Clip("rainwindow", scene_rainwindow),
+    Clip("cyber", scene_cyber),
+    Clip("storm", scene_storm),
+    Clip("blossom", scene_blossom),
+    Clip("galaxy", scene_galaxy),
+    Clip("tunnel", scene_tunnel),
 ]
 
 

@@ -45,6 +45,114 @@ export const CLIPS = {
     alt: 'Flowing teal and violet silk gradient',
     description: 'Flowing teal-and-violet gradient silk, like light on water.',
   },
+  desert: {
+    src: '/media/desert.mp4',
+    poster: '/media/posters/desert.jpg',
+    alt: 'Golden dunes under a low sun',
+    description: 'Layered desert dunes with a warm low sun and drifting haze.',
+  },
+  aurora: {
+    src: '/media/aurora.mp4',
+    poster: '/media/posters/aurora.jpg',
+    alt: 'Green and violet aurora over a dark sky',
+    description: 'Shimmering aurora ribbons drifting across a starry polar sky.',
+  },
+  snow: {
+    src: '/media/snow.mp4',
+    poster: '/media/posters/snow.jpg',
+    alt: 'Snow falling over blue ridges',
+    description: 'Soft snowfall over cold blue ridges with slow drifting flakes.',
+  },
+  neon: {
+    src: '/media/neon.mp4',
+    poster: '/media/posters/neon.jpg',
+    alt: 'Rainy neon alley in magenta and cyan',
+    description: 'Rain-slick neon alley with magenta and cyan signage reflections.',
+  },
+  embers: {
+    src: '/media/embers.mp4',
+    poster: '/media/posters/embers.jpg',
+    alt: 'Glowing embers rising from a fire',
+    description: 'Embers and sparks rising through warm smoke.',
+  },
+  ink: {
+    src: '/media/ink.mp4',
+    poster: '/media/posters/ink.jpg',
+    alt: 'Violet ink swirling in dark water',
+    description: 'Abstract violet ink blooming and swirling in darkness.',
+  },
+  underwater: {
+    src: '/media/underwater.mp4',
+    poster: '/media/posters/underwater.jpg',
+    alt: 'Sunlight shafts through turquoise water',
+    description: 'Turquoise underwater light shafts and slow caustics.',
+  },
+  ruins: {
+    src: '/media/ruins.mp4',
+    poster: '/media/posters/ruins.jpg',
+    alt: 'Ancient columns in dusty light',
+    description: 'Weathered stone columns and ruins in warm dusty light.',
+  },
+  clouds: {
+    src: '/media/clouds.mp4',
+    poster: '/media/posters/clouds.jpg',
+    alt: 'Soft cloud layers drifting',
+    description: 'Layered cloudscape drifting through a pale sky.',
+  },
+  lava: {
+    src: '/media/lava.mp4',
+    poster: '/media/posters/lava.jpg',
+    alt: 'Cracks of molten lava glowing',
+    description: 'Molten lava cracks pulsing between dark cooled crusts.',
+  },
+  fireworks: {
+    src: '/media/fireworks.mp4',
+    poster: '/media/posters/fireworks.jpg',
+    alt: 'Colourful fireworks in a night sky',
+    description: 'Firework bursts blooming and fading against a night sky.',
+  },
+  mountain: {
+    src: '/media/mountain.mp4',
+    poster: '/media/posters/mountain.jpg',
+    alt: 'Layered mountain peaks at dusk',
+    description: 'Layered mountain ridges fading into a dusk-lit horizon.',
+  },
+  rainwindow: {
+    src: '/media/rainwindow.mp4',
+    poster: '/media/posters/rainwindow.jpg',
+    alt: 'Raindrops and bokeh behind glass',
+    description: 'Rain streaks and warm city bokeh seen through a wet window.',
+  },
+  cyber: {
+    src: '/media/cyber.mp4',
+    poster: '/media/posters/cyber.jpg',
+    alt: 'Retro-futuristic grid horizon',
+    description: 'Retro-futuristic neon grid horizon with a sweeping scanline.',
+  },
+  storm: {
+    src: '/media/storm.mp4',
+    poster: '/media/posters/storm.jpg',
+    alt: 'Lightning inside dark storm clouds',
+    description: 'Dark churning storm clouds split by lightning flashes.',
+  },
+  blossom: {
+    src: '/media/blossom.mp4',
+    poster: '/media/posters/blossom.jpg',
+    alt: 'Cherry petals falling through pink light',
+    description: 'Cherry blossom petals drifting in soft pink spring light.',
+  },
+  galaxy: {
+    src: '/media/galaxy.mp4',
+    poster: '/media/posters/galaxy.jpg',
+    alt: 'Spiral galaxy turning slowly',
+    description: 'A slowly rotating spiral galaxy with a bright warm core.',
+  },
+  tunnel: {
+    src: '/media/tunnel.mp4',
+    poster: '/media/posters/tunnel.jpg',
+    alt: 'Gold light rings receding down a tunnel',
+    description: 'Gold light rings and radial lines receding down a tunnel.',
+  },
 } as const;
 
 export type ClipName = keyof typeof CLIPS;
@@ -82,7 +190,7 @@ export const ENGINES = [
     tag: 'FAST',
     icon: '⚡',
     kind: 'model',
-    clip: 'silk',
+    clip: 'neon',
     summary: 'Natural motion, tuned for short fast drafts.',
   },
   {
@@ -127,7 +235,7 @@ export const ENGINES = [
     tag: 'POWER',
     icon: '🚀',
     kind: 'preset',
-    clip: 'gold',
+    clip: 'galaxy',
     summary: 'Maximum-quality profile for final renders.',
   },
   {

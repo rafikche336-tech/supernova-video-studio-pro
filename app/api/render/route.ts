@@ -2,51 +2,58 @@ import { NextResponse } from 'next/server';
 import { MAX_PROMPT_LENGTH } from '@/lib/config';
 import { getEnv } from '@/lib/env';
 import { ENGINE_IDS } from '@/lib/engines/registry';
+import {
+  forbiddenCrossOrigin,
+  isSameOrigin,
+  logRouteError,
+  noStore,
+  unauthorised,
+} from '@/lib/http';
 import { logger } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { getRenderProvider } from '@/lib/render';
+import { getProviderResolution } from '@/lib/render';
 import { formatIssues, renderRequestSchema } from '@/lib/render/schema';
+import { toRenderJob } from '@/lib/render/serialize';
+import { startRender } from '@/lib/render/service';
 import { RenderProviderError } from '@/lib/render/types';
+import { requireApiUser } from '@/lib/session';
 
 export const runtime = 'nodejs';
 
-/**
- * Absolute ceiling for a request body. A prompt is capped at 400 characters, so
- * 8 KB is already generous — anything larger is a client bug or an attack. v1
- * had no limit and happily parsed (and echoed) 1 MB payloads.
- */
+/** Absolute ceiling for a request body (a prompt is capped at 400 chars). */
 const MAX_REQUEST_BYTES = 8 * 1024;
 
-function clientKey(request: Request): string {
+function clientKey(request: Request, userId?: string): string {
+  if (userId) return `user:${userId}`;
+
   const forwarded = request.headers.get('x-forwarded-for');
   const firstHop = forwarded?.split(',')[0]?.trim();
-  if (firstHop) return firstHop;
+  if (firstHop) return `ip:${firstHop}`;
 
-  return request.headers.get('x-real-ip')?.trim() || 'unknown';
+  return `ip:${request.headers.get('x-real-ip')?.trim() || 'unknown'}`;
 }
 
 /**
- * POST /api/render — create a render job.
+ * POST /api/render — create a render job for the signed-in user.
  *
- * @returns 202 `{ job, mode }` when accepted.
- * @returns 400 invalid JSON body.
- * @returns 413 body or prompt too large.
- * @returns 422 schema validation failed.
- * @returns 429 rate limited (see `Retry-After`).
- * @returns 501 live provider requested but not configured.
- * @returns 500 unexpected server error.
+ * @returns 202 `{ job, mode }` · 400 bad JSON · 401 anonymous · 403 cross-origin
+ *          413 too large · 422 invalid · 429 rate limited · 501 live not configured
  */
 export async function POST(request: Request): Promise<NextResponse> {
-  const env = getEnv();
+  if (!isSameOrigin(request)) return forbiddenCrossOrigin();
 
-  const limit = checkRateLimit(clientKey(request), {
+  const user = await requireApiUser();
+  if (!user) return unauthorised();
+
+  const env = getEnv();
+  const limit = checkRateLimit(clientKey(request, user.id), {
     capacity: env.RATE_LIMIT_CAPACITY,
     refillPerSecond: env.RATE_LIMIT_REFILL_PER_SECOND,
   });
 
   if (!limit.ok) {
     return NextResponse.json(
-      { error: 'Too many requests. Please slow down.' },
+      { error: 'Too many renders. Please slow down.' },
       {
         status: 429,
         headers: {
@@ -74,7 +81,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  // Reject oversized prompts before schema work so the reason is unambiguous.
   if (
     typeof payload === 'object' &&
     payload !== null &&
@@ -97,46 +103,84 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const provider = getRenderProvider();
-    const job = await provider.create(parsed.data);
+    const resolution = getProviderResolution();
+    const record = await startRender({
+      userId: user.id,
+      prompt: parsed.data.prompt,
+      engine: parsed.data.engine,
+    });
 
-    logger.info('render job created', { jobId: job.id, engine: job.engine, mode: provider.mode });
+    const mode = record.provider === 'demo' ? 'demo' : 'live';
 
-    return NextResponse.json(
-      { job, mode: provider.mode },
-      { status: 202, headers: { 'Cache-Control': 'no-store' } },
+    // The router silently falls back to the demo renderer when the live provider
+    // rejects a job. Say so in the response instead of letting the client believe
+    // it got model output.
+    const fellBack = record.provider === 'demo' && resolution.activeId !== 'demo';
+
+    logger.info('render job created', {
+      jobId: record.id,
+      engine: record.engine,
+      provider: record.provider,
+      userId: user.id,
+    });
+
+    return noStore(
+      {
+        job: toRenderJob(record),
+        mode,
+        provider: record.provider,
+        ...(fellBack
+          ? {
+              fallback: true,
+              notice:
+                'The live provider rejected this job, so it was rendered as a demo clip. Check the server logs for the provider error.',
+            }
+          : {}),
+      },
+      202,
     );
   } catch (error) {
     if (error instanceof RenderProviderError) {
       logger.warn('render provider unavailable', { code: error.code, message: error.message });
-      return NextResponse.json(
-        { error: error.message, code: error.code },
-        { status: error.status, headers: { 'Cache-Control': 'no-store' } },
-      );
+      return noStore({ error: error.message, code: error.code }, error.status);
     }
 
-    logger.error('render job failed', {
-      message: error instanceof Error ? error.message : String(error),
-    });
+    logRouteError('POST /api/render', error, { userId: user.id });
     return NextResponse.json({ error: 'Render failed.' }, { status: 500 });
   }
 }
 
 /**
- * GET /api/render — capability discovery / health check.
+ * GET /api/render — capabilities, health and which backend is live.
  *
- * Cacheable at the edge: it only reports static configuration.
+ * Cached briefly (not for an hour): the provider can be switched by changing the
+ * environment, and an operator checking this endpoint expects the truth.
  */
 export async function GET(): Promise<NextResponse> {
   const env = getEnv();
+  const resolution = getProviderResolution();
+  const live = resolution.activeId !== 'demo';
 
   return NextResponse.json(
     {
       status: 'ok',
-      mode: env.RENDER_PROVIDER,
+      mode: live ? 'live' : 'demo',
       maxPromptLength: MAX_PROMPT_LENGTH,
       engines: ENGINE_IDS,
+      requiresAuth: true,
+      provider: {
+        id: resolution.activeId,
+        model: resolution.model ?? null,
+        live,
+        requested: resolution.requested,
+        notice: resolution.notice ?? null,
+        fallback: 'demo',
+        configured: {
+          fal: Boolean(env.FAL_KEY),
+          replicate: Boolean(env.REPLICATE_API_TOKEN),
+        },
+      },
     },
-    { headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' } },
+    { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } },
   );
 }

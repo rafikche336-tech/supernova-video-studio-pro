@@ -39,9 +39,29 @@ describe('pickClip', () => {
 
   it('falls back to the engine default clip', () => {
     expect(pickClip('something entirely unrelated', 'wan')).toBe('space');
-    expect(pickClip('something entirely unrelated', 'mochi')).toBe('silk');
+    expect(pickClip('something entirely unrelated', 'mochi')).toBe('neon');
     expect(pickClip('something entirely unrelated', 'svd')).toBe('ocean');
     expect(pickClip('', 'shorts')).toBe('city');
+    expect(pickClip('something entirely unrelated', 'ultra')).toBe('galaxy');
+  });
+
+  it('routes the extended clip library', () => {
+    expect(pickClip('a sand dune in the sahara', 'wan')).toBe('desert');
+    expect(pickClip('an aurora over the tundra', 'wan')).toBe('aurora');
+    expect(pickClip('shooting fireworks over a bay', 'wan')).toBe('fireworks');
+    expect(pickClip('a storm rolling in at night', 'wan')).toBe('storm');
+    expect(pickClip('cherry blossom petals falling', 'wan')).toBe('blossom');
+    expect(pickClip('molten lava flowing down a volcano', 'wan')).toBe('lava');
+    expect(pickClip('snow falling on a quiet field', 'wan')).toBe('snow');
+    expect(pickClip('rain on the window at night', 'wan')).toBe('rainwindow');
+    expect(pickClip('a tunnel of gold light', 'wan')).toBe('tunnel');
+  });
+
+  it('keeps the earlier keywords winning where rules overlap', () => {
+    // 'underwater' lives in the ocean rule, which is evaluated first.
+    expect(pickClip('an underwater reef', 'wan')).toBe('ocean');
+    // 'galaxy' still routes to the starfield clip.
+    expect(pickClip('a spiral galaxy', 'wan')).toBe('space');
   });
 
   it('prefers prompt keywords over the engine default', () => {

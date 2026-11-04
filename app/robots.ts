@@ -9,8 +9,8 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        // The render API is not content — keep crawlers away from it.
-        disallow: ['/api/'],
+        // The render API is not content, and account pages are private.
+        disallow: ['/api/', '/history', '/dashboard', '/login', '/studio'],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

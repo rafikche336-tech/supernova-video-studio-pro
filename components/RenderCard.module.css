@@ -1,0 +1,133 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.025);
+  transition:
+    border-color 180ms var(--ease-out),
+    transform 180ms var(--ease-out);
+}
+
+.card:hover {
+  border-color: var(--border-gold);
+  transform: translateY(-2px);
+}
+
+.media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: #050508;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: 1.5rem;
+  color: var(--text-dim);
+  background: radial-gradient(circle at 50% 40%, rgba(212, 175, 55, 0.12), transparent 65%);
+}
+
+.badge {
+  position: absolute;
+  top: 10px;
+  inset-inline-start: 10px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.62);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  backdrop-filter: blur(6px);
+}
+
+.badge[data-status='succeeded'] {
+  color: #9ef0b9;
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+.badge[data-status='failed'] {
+  color: var(--danger);
+  border-color: rgba(255, 143, 143, 0.45);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 14px 15px;
+}
+
+.prompt {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.engine {
+  color: var(--gold);
+  letter-spacing: 0.06em;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.download {
+  --btn-bg: var(--gold-soft);
+  --btn-border: var(--border-gold);
+  color: var(--gold-bright);
+}
+
+.shareLink {
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--border);
+}
+
+.shareLink:hover {
+  color: var(--text);
+}
+
+.error {
+  font-size: 0.78rem;
+  color: var(--danger);
+}
+
+.pending {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+@media (hover: none) {
+  .card:hover {
+    transform: none;
+  }
+}
