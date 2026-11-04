@@ -1,9 +1,140 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/**
+ * Global styles and design tokens.
+ *
+ * v1 used ~24 inline `style={{…}}` objects and shipped Tailwind at-rules that
+ * were never compiled (no PostCSS config). Styling is now plain CSS Modules on
+ * top of the custom properties below — no build-time CSS pipeline required.
+ */
 
-body { 
-  background: #0a0a0a; 
-  color: white;
-  font-family: system-ui, sans-serif;
+:root {
+  color-scheme: dark;
+
+  --bg: #050507;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-strong: rgba(0, 0, 0, 0.55);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-gold: rgba(212, 175, 55, 0.32);
+
+  --gold: #d4af37;
+  --gold-bright: #f0cf6b;
+  --gold-soft: rgba(212, 175, 55, 0.16);
+
+  --text: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.62);
+  --text-dim: rgba(255, 255, 255, 0.45);
+
+  --success: #22c55e;
+  --danger: #ff8f8f;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
+    'Noto Sans Arabic', 'Noto Sans SC', sans-serif;
+
+  --focus-ring: 0 0 0 3px rgba(212, 175, 55, 0.55);
+  --shadow-card: 0 18px 40px -24px rgba(0, 0, 0, 0.9);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+img,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+/* Visible, consistent keyboard focus everywhere. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+/* Screen-reader-only text (labels, skip link target descriptions). */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skipLink {
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 8px;
+  z-index: 10;
+  padding: 10px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--gold);
+  color: #000;
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform 120ms ease-out;
+}
+
+.skipLink:focus-visible {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

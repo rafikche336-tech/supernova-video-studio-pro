@@ -1,0 +1,241 @@
+.card {
+  height: 100%;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--surface), rgba(255, 255, 255, 0.01));
+  box-shadow: var(--shadow-card);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.card:hover {
+  border-color: rgba(212, 175, 55, 0.22);
+}
+
+.card[data-expanded] {
+  border-color: var(--border-gold);
+}
+
+.heading {
+  margin: 0;
+  font: inherit;
+}
+
+.toggle {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 18px 20px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: none;
+  text-align: start;
+  cursor: pointer;
+}
+
+.toggle:hover .marker {
+  border-color: var(--border-gold);
+  color: var(--gold);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.65);
+  font-size: 20px;
+}
+
+.titles {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tag {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.name {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.marker {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+.card[data-expanded] .marker {
+  border-color: var(--border-gold);
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+
+.panel {
+  padding: 0 20px 20px;
+}
+
+/* `hidden` must win over the module's display rules. */
+.panel[hidden] {
+  display: none;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 84px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.textarea::placeholder {
+  color: var(--text-dim);
+}
+
+.textarea:disabled {
+  opacity: 0.6;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.generate {
+  flex: 1 1 auto;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--gold);
+  color: #120d00;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 140ms ease;
+}
+
+.generate:hover:not(:disabled) {
+  background: var(--gold-bright);
+}
+
+.generate:disabled {
+  background: #232326;
+  color: #7b7b83;
+  cursor: not-allowed;
+}
+
+.secondary {
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.secondary:hover {
+  border-color: var(--border-gold);
+  color: var(--gold);
+}
+
+.status {
+  margin-top: 12px;
+}
+
+.progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.progressBar {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+  transition: width 240ms ease-out;
+}
+
+.ready {
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.failed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.errorText {
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.errorDetail {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.download {
+  display: block;
+  padding: 10px 16px;
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-sm);
+  background: var(--gold-soft);
+  color: var(--gold);
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.download:hover {
+  background: rgba(212, 175, 55, 0.24);
+}
