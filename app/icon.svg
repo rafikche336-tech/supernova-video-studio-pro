@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Supernova">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f0cf6b" />
+      <stop offset="100%" stop-color="#b8901f" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#050507" />
+  <path
+    fill="url(#gold)"
+    d="M32 9.5l4.9 13.1 13.9.7-10.9 8.7 3.6 13.5L32 37.9l-11.5 7.6 3.6-13.5-10.9-8.7 13.9-.7z"
+  />
+  <circle cx="32" cy="32" r="2.6" fill="#fff8e1" opacity="0.9" />
+</svg>

@@ -1,28 +1,70 @@
 {
   "name": "supernova-video-studio",
-  "version": "1.0.0",
-  "description": "All-in-One AI Video Studio - Wan 2.2 + Mochi 1 + SVD + OpenShorts",
-  "author": "SupernovaSolutionsHQ",
+  "version": "2.0.0",
+  "private": true,
+  "description": "All-in-one AI video studio UI — multi-engine prompt studio with a pluggable render backend (demo mode by default).",
+  "author": {
+    "name": "SupernovaSolutionsHQ",
+    "url": "https://github.com/rafikche336-tech/supernova-video-studio-pro"
+  },
   "license": "MIT",
-  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rafikche336-tech/supernova-video-studio-pro.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rafikche336-tech/supernova-video-studio-pro/issues"
+  },
+  "homepage": "https://github.com/rafikche336-tech/supernova-video-studio-pro#readme",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "packageManager": "npm@10.9.8",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "node scripts/integration-test.mjs",
+    "audit:ci": "npm audit --audit-level=high",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "media:generate": "python3 scripts/generate-demo-clips.py"
   },
   "dependencies": {
-    "next": "^14.2.0",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0"
+    "next": "16.4.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/react": "^18.0.0",
-    "typescript": "^5.0.0",
-    "tailwindcss": "^3.4.0",
-    "autoprefixer": "^10.4.0",
-    "postcss": "^8.4.0"
+    "@eslint/eslintrc": "3.3.1",
+    "@types/node": "22.20.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.5",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
   },
-  "keywords": ["ai", "video", "wan", "mochi", "svd", "text-to-video", "supernova"]
+  "keywords": [
+    "ai",
+    "video",
+    "nextjs",
+    "text-to-video",
+    "wan",
+    "mochi",
+    "svd",
+    "openshorts",
+    "supernova"
+  ],
+  "overrides": {
+    "tinypool": "2.2.0"
+  }
 }

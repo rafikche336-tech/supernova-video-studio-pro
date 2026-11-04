@@ -1,0 +1,11 @@
+.next
+node_modules
+coverage
+public/media
+package-lock.json
+next-env.d.ts
+*.mp4
+*.jpg
+*.png
+AUDIT_REPORT.md
+CHANGELOG.md
