@@ -152,3 +152,9 @@ vite.config.ts.timestamp-*
 .venv-clips/
 .DS_Store
 *.tsbuildinfo
+data/
+*.db
+*.db-wal
+*.db-shm
+__pycache__/
+*.pyc

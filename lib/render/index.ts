@@ -1,38 +1,33 @@
 import { getEnv } from '@/lib/env';
-import { LiveRenderProvider } from './live-provider';
-import { MockRenderProvider } from './mock-provider';
-import { RenderProviderError, type RenderProvider } from './types';
+import { resolveProviders, type ProviderResolution } from './providers';
+import type { RenderProvider } from './types';
 
 export * from './types';
-export { MockRenderProvider } from './mock-provider';
+export { resolveProviders, DEFAULT_FAL_MODEL, DEFAULT_REPLICATE_MODEL } from './providers';
+export { DemoRenderProvider } from './providers/demo';
+export { FalVideoProvider } from './providers/fal';
+export { ReplicateVideoProvider } from './providers/replicate';
+export { ProviderRouter } from './providers/router';
+export type { ProviderResolution } from './providers';
+export type { FalProviderConfig } from './providers/fal';
+export type { ReplicateProviderConfig } from './providers/replicate';
 
-let cached: RenderProvider | null = null;
+let cached: ProviderResolution | null = null;
 
 /**
- * Returns the configured provider (memoised per process).
+ * Resolves (and memoises) the configured provider chain.
  *
- * Throws `RenderProviderError` when live mode is requested without the config
- * it needs — routes translate that into a 501 rather than faking success.
+ * The chain is: live provider (fal or Replicate) → demo renderer. The router
+ * decides per job, so a live outage degrades to a demo clip instead of an error.
  */
-export function getRenderProvider(): RenderProvider {
-  if (cached) return cached;
-
-  const env = getEnv();
-
-  if (env.RENDER_PROVIDER === 'live') {
-    if (!env.RENDER_API_URL || !env.RENDER_API_KEY) {
-      throw new RenderProviderError(
-        'provider-not-configured',
-        'RENDER_PROVIDER=live requires RENDER_API_URL and RENDER_API_KEY.',
-        501,
-      );
-    }
-    cached = new LiveRenderProvider({ apiUrl: env.RENDER_API_URL, apiKey: env.RENDER_API_KEY });
-    return cached;
-  }
-
-  cached = new MockRenderProvider();
+export function getProviderResolution(): ProviderResolution {
+  cached ??= resolveProviders(getEnv());
   return cached;
+}
+
+/** The provider the routes talk to. */
+export function getRenderProvider(): RenderProvider {
+  return getProviderResolution().router;
 }
 
 /** Test helper — forget the memoised provider. */

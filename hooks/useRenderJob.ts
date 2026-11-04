@@ -12,9 +12,16 @@ export interface RenderJobController {
   readonly progress: number;
   readonly job: RenderJob | null;
   readonly error: string | null;
+  /** True when the server answered 401 — the session expired mid-render. */
+  readonly requiresAuth: boolean;
   readonly start: (prompt: string, engine: EngineId) => Promise<void>;
   readonly cancel: () => void;
   readonly reset: () => void;
+}
+
+export interface UseRenderJobOptions {
+  /** Fired once per successful job, e.g. to refresh the history rail. */
+  readonly onComplete?: (job: RenderJob) => void;
 }
 
 interface JobResponse {
@@ -52,11 +59,18 @@ async function readJson<T>(response: Response): Promise<T> {
  * state machine. The abort controller and run id make cancellation races
  * impossible, and nothing is written after unmount.
  */
-export function useRenderJob(): RenderJobController {
+export function useRenderJob(options: UseRenderJobOptions = {}): RenderJobController {
   const [phase, setPhase] = useState<RenderPhase>('idle');
   const [progress, setProgress] = useState(0);
   const [job, setJob] = useState<RenderJob | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [requiresAuth, setRequiresAuth] = useState(false);
+
+  // Keep the newest callback without making `start` unstable.
+  const onCompleteRef = useRef(options.onComplete);
+  useEffect(() => {
+    onCompleteRef.current = options.onComplete;
+  }, [options.onComplete]);
 
   const abortRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
@@ -97,6 +111,7 @@ export function useRenderJob(): RenderJobController {
     setProgress(0);
     setJob(null);
     setError(null);
+    setRequiresAuth(false);
 
     try {
       const response = await fetch('/api/render', {
@@ -107,6 +122,10 @@ export function useRenderJob(): RenderJobController {
       });
 
       const created = await readJson<JobResponse>(response);
+
+      if (response.status === 401) {
+        setRequiresAuth(true);
+      }
 
       if (!response.ok) {
         throw new Error(created.error ?? `The server rejected the request (${response.status}).`);
@@ -156,6 +175,7 @@ export function useRenderJob(): RenderJobController {
       if (isStale()) return;
       setProgress(100);
       setPhase('succeeded');
+      onCompleteRef.current?.(current);
     } catch (thrown) {
       // A cancellation is not a failure — the state was already reset.
       if (controller.signal.aborted || isStale()) return;
@@ -165,5 +185,5 @@ export function useRenderJob(): RenderJobController {
     }
   }, []);
 
-  return { phase, progress, job, error, start, cancel: settle, reset: settle };
+  return { phase, progress, job, error, requiresAuth, start, cancel: settle, reset: settle };
 }
